@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -20,6 +19,7 @@ import (
 	"github.com/gokch/memechain/utilx"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 /* 빌드할 때 변수가 설정됨. Makefile 참고. */
@@ -76,9 +76,6 @@ var (
 type MainContext struct {
 	Hostname           string
 	UUID               string
-	LogWriter          io.WriteCloser
-	ErrorLogger        *log.Logger
-	DebugLogger        *log.Logger
 	PeerList           []string
 	PeerNumConcurrent  int
 	LocalNumConcurrent int
@@ -135,7 +132,7 @@ func peerListFromURL(mainContext *MainContext, url string, timeout time.Duration
 			}
 			return peers, nil
 		}
-		DebugPrintf("An error occured during get peer list.: %v", err)
+		log.Error().Err(err).Msg("An error occured during get peer list.")
 
 		tl1 := time.Now()
 		if tl1.Sub(t0) > timeout {
@@ -152,16 +149,9 @@ func peerListFromURL(mainContext *MainContext, url string, timeout time.Duration
 }
 
 func (mainContext *MainContext) Init() (err error) {
-	mainContext.LogWriter = NewBufferedWriteCloser(os.Stderr, 512*1024, 500*time.Millisecond)
-	mainContext.ErrorLogger = log.New(mainContext.LogWriter, "", 0)
-	mainContext.DebugLogger = log.New(mainContext.LogWriter, "", 0)
-	mainContext.ErrorLogger.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
-	mainContext.DebugLogger.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
-
 	defer func() {
 		if err != nil {
-			ErrorPrintf("Initialize failed.:%v", err)
-			mainContext.Fin()
+			log.Error().Err(err).Msg("Initialize failed")
 		}
 	}()
 
@@ -226,7 +216,7 @@ func (mainContext *MainContext) Init() (err error) {
 		var list []string
 		list, err = peerListFromURL(mainContext, strings.TrimSpace(*flagPeerListURL), *flagPeerWaitTimeout)
 		if err != nil {
-			ErrorPrintf("Failed to retrieve peers list from URL %v.: %v", *flagPeerListURL, err)
+			log.Error().Err(err).Str("URL", *flagPeerListURL).Msg("Failed to retrieve peers list from URL")
 			return
 		}
 		mainContext.PeerList = append(mainContext.PeerList, list...)
@@ -249,12 +239,8 @@ func (mainContext *MainContext) Init() (err error) {
 	}
 	mainContext.LocalNumConcurrent = *flagLocalNumConcurrent
 
-	DebugPrintf("Initialization done.")
+	log.Info().Msg("Initialization done.")
 	return
-}
-
-func (mainContext *MainContext) Fin() {
-	mainContext.LogWriter.Close()
 }
 
 func createDir(mainContext *MainContext, dir types.Dir) error {
@@ -310,7 +296,7 @@ func createFile(mainContext *MainContext, file types.File) error {
 	}
 	defer localFile.Close()
 
-	return syscall.Ftruncate(int(localFile.Fd()), file.Size)
+	return syscall.Ftruncate(syscall.Handle(localFile.Fd()), file.Size)
 }
 
 type ChunkQueue struct {
@@ -445,7 +431,7 @@ func execDownloader(mainContext *MainContext, downloader FileDownloader, numPeer
 			mainContext.LastUpdatedAt.Store(t1)
 
 			if err == nil {
-				DebugPrintf("[%v] downloaded %v bytes of chunk:%v, elapsed:%v", nameDownloader, length, transferChunkIndex, t1.Sub(t0))
+				log.Info().Str("host", mainContext.Hostname).Str("downloader", nameDownloader).Int("chunk", transferChunkIndex).Str("elapsed", t1.Sub(t0).String()).Msg("downloaded")
 				chunksReceivedTotal.Add(1)
 				bytesReceivedTotal.Add(length)
 				durationTotal.Add(t1.Sub(t0))
@@ -455,7 +441,7 @@ func execDownloader(mainContext *MainContext, downloader FileDownloader, numPeer
 
 				numCompleted.Add(1)
 			} else {
-				ErrorPrintf("[%v] %v Chunk download failed.:%v", nameDownloader, transferChunkIndex, err)
+				log.Error().Str("host", mainContext.Hostname).Str("downloader", nameDownloader).Int("chunk", transferChunkIndex).Err(err).Msg("download failed")
 
 				/* 결과가 error인 경우 재시도 */
 				mainContext.TransferChunks[transferChunkIndex].Status.Store(types.ChunkStatusPending)
@@ -481,7 +467,7 @@ func execDownloader(mainContext *MainContext, downloader FileDownloader, numPeer
 		if mainContext.Manifest.TransferChunkCount == int(numCompleted.Load()) {
 			mainContext.WantStopDownload.Store(true)
 			mainContext.Completed.Store(true)
-			DebugPrintf("[%v] download job done.", nameDownloader)
+			log.Info().Str("host", mainContext.Hostname).Str("downloader", nameDownloader).Msg("download job done.")
 			break
 		}
 
@@ -521,7 +507,7 @@ func execDownloader(mainContext *MainContext, downloader FileDownloader, numPeer
 	}
 }
 
-func downloadFiles(mainContext *MainContext) error {
+func DownloadFiles(mainContext *MainContext) error {
 	/* 링크와 파일 다운로드 준비를 위해 디렉토리 먼저 생성 */
 	err := os.MkdirAll(mainContext.DirDst, os.ModePerm)
 	if err != nil {
@@ -530,36 +516,36 @@ func downloadFiles(mainContext *MainContext) error {
 	for _, dir := range mainContext.Manifest.Dirs {
 		err = createDir(mainContext, dir)
 		if err != nil {
-			DebugPrintf("create directory(%s) failed:%v", dir.Name, err)
+			log.Error().Err(err).Str("dir", dir.Name).Msg("create directory failed")
 			return err
 		}
-		DebugPrintf("created directory.:%v", dir.Name)
+		log.Info().Str("dir", dir.Name).Msg("created directory")
 	}
 
 	for _, symlink := range mainContext.Manifest.Symlinks {
 		err = createSymlink(mainContext, symlink.Name, symlink.SymlinkTo)
 		if err != nil {
-			DebugPrintf("create symbolic link(%s) failed:%v", symlink.Name, err)
+			log.Error().Err(err).Str("symlink", symlink.Name).Msg("create symbolic link failed")
 			return err
 		}
-		DebugPrintf("created symbolic link.:%v -> %v", symlink.Name, symlink.SymlinkTo)
+		log.Info().Str("symlink", symlink.Name).Msg("created symbolic link")
 	}
 
 	/* 파일 길이가 0인 파일은 다운로드 하지 않고 그냥 생성 */
 	for _, emptyFile := range mainContext.Manifest.EmptyFiles {
 		err = createEmptyFile(mainContext, emptyFile)
 		if err != nil {
-			DebugPrintf("create empty file(%s) failed:%v", emptyFile.Name, err)
+			log.Error().Err(err).Str("file", emptyFile.Name).Msg("create empty file failed")
 			return err
 		}
-		DebugPrintf("created empty file.:%v", emptyFile.Name)
+		log.Info().Str("file", emptyFile.Name).Msg("created empty file")
 	}
 
 	/* 전송할 파일을 미리 만들고 resize 함 */
 	for _, file := range mainContext.Manifest.Files {
 		err = createFile(mainContext, file)
 		if err != nil {
-			DebugPrintf("create file(%s) failed:%v", file.Name, err)
+			log.Error().Err(err).Str("file", file.Name).Msg("create file failed")
 			return err
 		}
 	}
@@ -629,7 +615,7 @@ func downloadFiles(mainContext *MainContext) error {
 		printStatistics(mainContext)
 	}
 
-	DebugPrintf("All download workers finished.")
+	log.Info().Str("host", mainContext.Hostname).Str("elapsed", elapsed.String()).Msg("download job done.")
 	return nil
 }
 
@@ -667,14 +653,4 @@ func printStatistics(mainContext *MainContext) {
 		value := mainContext.Statistics[key]
 		fmt.Printf("[%v] %v = %v\n", mainContext.Hostname, key, value)
 	}
-}
-
-func DebugPrintf(format string, args ...interface{}) {
-	if *flagVerbose {
-		mainContext.DebugLogger.Output(2, fmt.Sprintf("["+mainContext.Hostname+"] "+format, args...))
-	}
-}
-
-func ErrorPrintf(format string, args ...interface{}) {
-	mainContext.ErrorLogger.Output(2, fmt.Sprintf("["+mainContext.Hostname+"] "+format, args...))
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gokch/memechain/types"
+	"github.com/rs/zerolog/log"
 )
 
 type FileDownloader interface {
@@ -258,26 +259,26 @@ func (downloader *PeerFileDownloader) Init(mainContext *MainContext, peerHost st
 			if !isSelfInit {
 				err := downloader.setIsSelf()
 				if err != nil {
-					ErrorPrintf("Failed to update isSelf %s: %s", peerHost, err.Error())
+					log.Error().Err(err).Str("itself", peerHost).Msg("Failed to update isSelf")
 					goto WAIT
 				}
 				isSelfInit = true
 
 				if downloader.isSelf.Load() {
-					DebugPrintf("Peer %v is this server itself.", peerHost)
+					log.Debug().Str("itself", peerHost).Msg("Peer is this server itself.")
 					break
 				}
 			}
 			if !isValidInit {
 				isValid, err := downloader.verifyChecksum()
 				if err != nil {
-					ErrorPrintf("Failed to verify checksum %s: %s", peerHost, err.Error())
+					log.Error().Err(err).Str("peer", peerHost).Msg("Failed to verify checksum")
 					goto WAIT
 				}
 				isValidInit = true
 
 				if !isValid {
-					ErrorPrintf("Failed to verify checksum %s: peer has different checksum", peerHost)
+					log.Error().Str("peer", peerHost).Msg("Peer has different checksum")
 					mainContext.WantStopDownload.Store(true)
 					return
 				}
@@ -285,9 +286,9 @@ func (downloader *PeerFileDownloader) Init(mainContext *MainContext, peerHost st
 
 			err = downloader.updateAvailableList()
 			if err != nil {
-				ErrorPrintf("Failed to receive available list from peer %s: %s", peerHost, err.Error())
+				log.Debug().Err(err).Str("peer", peerHost).Msg("Failed to update available list")
 			} else if downloader.availableListCount == mainContext.Manifest.TransferChunkCount {
-				DebugPrintf("Peer %v now has complete available list.", peerHost)
+				log.Debug().Str("peer", peerHost).Msg("Peer now has complete available list.")
 				break
 			}
 

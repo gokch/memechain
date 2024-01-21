@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gokch/memechain/types"
+	"github.com/rs/zerolog/log"
 )
 
 type Manifest struct {
@@ -44,19 +45,19 @@ func (m *Manifest) Init(dirSrc string, peerList []string) ([]types.TransferChunk
 	var err error
 
 	if dirSrc != "" {
-		DebugPrintf("Making local files list...")
+		log.Debug().Msgf("Making local files list...")
 
 		chunks, err = m.scanDirectoryLocal(dirSrc)
 		if err != nil {
-			ErrorPrintf("Failed to make local files list.: %v", err)
+			log.Error().Err(err).Msg("Failed to make local files list.")
 			return nil, err
 		}
 	} else if len(peerList) > 0 {
-		DebugPrintf("Waiting peer who has complete files list...")
+		log.Debug().Msg("Waiting peer who has complete files list...")
 
 		chunks, err = m.scanDirectoryPeer(peerList)
 		if err != nil {
-			ErrorPrintf("Failed to make remote files list.: %v", err)
+			log.Error().Err(err).Msg("Failed to make remote files list")
 			return nil, err
 		}
 	} else {
@@ -65,7 +66,7 @@ func (m *Manifest) Init(dirSrc string, peerList []string) ([]types.TransferChunk
 
 	m.JsonData, err = json.Marshal(mainContext.Manifest)
 	if err != nil {
-		ErrorPrintf("manifest JSON Marshal failed.:%v", err)
+		log.Error().Err(err).Msgf("manifest JSON Marshal failed.")
 		return nil, err
 	}
 
@@ -132,14 +133,14 @@ func (m *Manifest) createChunkChecksum(files []types.File, transferChunkList []t
 
 	jsonData, err := json.Marshal(files)
 	if err != nil {
-		ErrorPrintf("JSON Marshal failed.:%v", err)
+		log.Error().Err(err).Msg("JSON Marshal failed.")
 		return "", err
 	}
 	hash.Write(jsonData)
 
 	jsonData, err = json.Marshal(transferChunkList)
 	if err != nil {
-		ErrorPrintf("JSON Marshal failed.:%v", err)
+		log.Error().Err(err).Msg("JSON Marshal failed.")
 		return "", err
 	}
 	hash.Write(jsonData)
@@ -214,7 +215,7 @@ func (m *Manifest) scanDirectoryPeer(peerList []string) ([]types.TransferChunk, 
 			if err == nil {
 				return chunks, nil
 			}
-			DebugPrintf("failed to getting files list from peer %v: %v", peer, err)
+			log.Debug().Err(err).Str("peer", peer).Msg("failed to getting files list from peer")
 		}
 		tl1 := time.Now()
 		if tl1.Sub(t0) > *flagPeerWaitTimeout {
@@ -241,7 +242,7 @@ func (m *Manifest) scanDirectoryLocalTarget(dirSrc string, subDir string, dirs *
 		name := subDir + localFile.Name()
 		info, err := localFile.Info()
 		if err != nil {
-			ErrorPrintf("%v: get info failed:%s", name, err.Error())
+			log.Error().Err(err).Str("name", name).Msg("get info failed")
 			return err
 		}
 
@@ -255,7 +256,7 @@ func (m *Manifest) scanDirectoryLocalTarget(dirSrc string, subDir string, dirs *
 		} else if mode&os.ModeSymlink != 0 {
 			symlinkTo, err := os.Readlink(dirSrc + name)
 			if err != nil {
-				ErrorPrintf("%v: Readlink failed:%s", name, err.Error())
+				log.Error().Err(err).Str("name", name).Msg("readlink failed")
 				return err
 			}
 			*symlinks = append(*symlinks, types.Symlink{Name: name, SymlinkTo: symlinkTo})
@@ -267,7 +268,7 @@ func (m *Manifest) scanDirectoryLocalTarget(dirSrc string, subDir string, dirs *
 				*files = append(*files, types.File{Name: name, Size: size, Perm: mode.Perm()})
 			}
 		} else {
-			ErrorPrintf("%v: unsupported mode(%v). ignored.", name, mode)
+			log.Warn().Str("name", name).Str("mode", mode.String()).Msg("unsupported mode. ignored.")
 			continue
 		}
 	}

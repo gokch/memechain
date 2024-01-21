@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gokch/memechain/types"
+	"github.com/rs/zerolog/log"
 )
 
 func textResponse(w http.ResponseWriter, content string, status int) error {
@@ -62,7 +63,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 
 		err := textResponse(w, content, status)
 		if err != nil {
-			ErrorPrintf("Write failed.:%v", err)
+			log.Error().Err(err).Msg("Write failed.")
 			return
 		}
 	})
@@ -71,7 +72,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 	mux.HandleFunc("/uuid", func(w http.ResponseWriter, r *http.Request) {
 		err := textResponse(w, mainContext.UUID, http.StatusOK)
 		if err != nil {
-			ErrorPrintf("Write failed.:%v", err)
+			log.Error().Err(err).Msg("Write failed.")
 			return
 		}
 	})
@@ -79,7 +80,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		err := textResponse(w, getVersion(), http.StatusOK)
 		if err != nil {
-			ErrorPrintf("Write failed.:%v", err)
+			log.Error().Err(err).Msg("Write failed.")
 			return
 		}
 	})
@@ -88,7 +89,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 		encodingType := setEncodingType(w, r)
 		reader, length, err := NewBufferEncodingReader(mainContext.Manifest.JsonData, encodingType)
 		if err != nil {
-			ErrorPrintf("NewBufferEncodingReader failed.:%v", err)
+			log.Error().Err(err).Msg("NewBufferEncodingReader failed.")
 			errorResponse(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -98,7 +99,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 		written, err := io.Copy(w, reader)
 		mainContext.BytesTransmittedTotal.Add(written)
 		if err != nil {
-			ErrorPrintf("io.Copy failed.:%v", err)
+			log.Error().Err(err).Msg("io.Copy failed.")
 			errorResponse(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -107,7 +108,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 	mux.HandleFunc("/manifest/checksum", func(w http.ResponseWriter, r *http.Request) {
 		err := textResponse(w, mainContext.Manifest.ChunkChecksum, http.StatusOK)
 		if err != nil {
-			ErrorPrintf("Write failed.:%v", err)
+			log.Error().Err(err).Msg("Write failed.")
 			return
 		}
 	})
@@ -132,7 +133,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 				var err error
 				onlyUpdatedSince, err = time.Parse(time.RFC3339Nano, onlyUpdatedSinceStr)
 				if err != nil {
-					ErrorPrintf("invalid timestamp.:only_updated_since=%v, %v", onlyUpdatedSinceStr, err.Error())
+					log.Error().Err(err).Msgf("invalid timestamp.:only_updated_since=%v", onlyUpdatedSinceStr)
 					errorResponse(w, http.StatusBadRequest, err)
 					return
 				}
@@ -148,7 +149,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 
 		json, err := json.Marshal(resultObject)
 		if err != nil {
-			ErrorPrintf("JSON Marshal failed.:%v", err)
+			log.Error().Err(err).Msg("JSON Marshal failed.")
 			errorResponse(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -156,7 +157,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 		encodingType := setEncodingType(w, r)
 		reader, length, err := NewBufferEncodingReader(json, encodingType)
 		if err != nil {
-			ErrorPrintf("NewBufferEncodingReader failed.:%v", err)
+			log.Error().Err(err).Msg("NewBufferEncodingReader failed.")
 			errorResponse(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -166,7 +167,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 		written, err := io.Copy(w, reader)
 		mainContext.BytesTransmittedTotal.Add(written)
 		if err != nil {
-			ErrorPrintf("io.Copy failed.:%v", err)
+			log.Error().Err(err).Msg("io.Copy failed.")
 			errorResponse(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -188,20 +189,20 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 		path := strings.TrimPrefix(r.URL.Path, servePointFiles)
 		transferChunkIndex, err := strconv.Atoi(path)
 		if err != nil {
-			ErrorPrintf("strconv.Atoi failed:%v. got (%s)", err, r.URL.Path)
+			log.Error().Err(err).Msgf("strconv.Atoi failed. got (%s)", r.URL.Path)
 			errorResponse(w, http.StatusForbidden, errors.New("chunk index is not an integer"))
 			return
 		}
 
 		if transferChunkIndex < 0 || transferChunkIndex >= mainContext.Manifest.TransferChunkCount {
-			ErrorPrintf("chunk index is out of range. should be in range 0 ~ %d. got (%d)", mainContext.Manifest.TransferChunkCount, transferChunkIndex)
+			log.Error().Msgf("chunk index is out of range. should be in range 0 ~ %d. got (%d)", mainContext.Manifest.TransferChunkCount, transferChunkIndex)
 			errorResponse(w, http.StatusForbidden, errors.New("chunk index out of range"))
 			return
 		}
 
 		status := GetChunkStatus(transferChunkIndex)
 		if status != types.ChunkStatusDone {
-			ErrorPrintf("chunk not ready: chunk:%v, %v", transferChunkIndex, status)
+			log.Error().Msgf("chunk not ready: chunk:%v, %v", transferChunkIndex, status)
 			errorResponse(w, http.StatusForbidden, errors.New("chunk not ready"))
 			return
 		}
@@ -221,7 +222,7 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 
 			f, err := os.Open(htdocs + file.Name)
 			if err != nil {
-				ErrorPrintf("Open failed:%v, file:%v", err, htdocs+file.Name)
+				log.Error().Err(err).Str("fileName", htdocs+file.Name).Msg("Open failed.")
 				errorResponse(w, http.StatusInternalServerError, err)
 				return
 			}
@@ -229,14 +230,14 @@ func CreateHttpServer(mainContext *MainContext) *http.Server {
 
 			_, err = f.Seek(fileChunk.FromOffset, io.SeekStart)
 			if err != nil {
-				ErrorPrintf("Seek failed:%v, file:%v", err, htdocs+file.Name)
+				log.Error().Err(err).Str("fileName", htdocs+file.Name).Msg("Seek failed.")
 				errorResponse(w, http.StatusInternalServerError, err)
 				return
 			}
 
 			written, err := io.CopyN(writer, f, fileChunk.ToOffset-fileChunk.FromOffset)
 			if err != nil {
-				ErrorPrintf("Copy failed:%v, file:%v", err, htdocs+file.Name)
+				log.Error().Err(err).Str("fileName", htdocs+file.Name).Msg("CopyN failed.")
 				errorResponse(w, http.StatusInternalServerError, err)
 				return
 			}
