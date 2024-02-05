@@ -8,9 +8,12 @@ import (
 	"github.com/lrstanley/go-ytdlp"
 )
 
-func NewYtDlpDownloader() *YtDlpDownloader {
-	ytdlp.MustInstall(context.Background(), nil)
-	return &YtDlpDownloader{}
+func NewYtDlpDownloader() (*YtDlpDownloader, error) {
+	_, err := ytdlp.Install(context.Background(), nil)
+	if err != nil {
+		return nil, err
+	}
+	return &YtDlpDownloader{}, nil
 }
 
 var _ Downloader = (*YtDlpDownloader)(nil)

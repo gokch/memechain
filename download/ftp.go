@@ -7,14 +7,14 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-func NewFtpDownloader(host string) *FtpDownloader {
+func NewFtpDownloader(host string) (*FtpDownloader, error) {
 	client, err := ftp.Dial(host)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	return &FtpDownloader{
 		client: client,
-	}
+	}, nil
 }
 
 var _ Downloader = (*FtpDownloader)(nil)

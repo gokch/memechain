@@ -10,15 +10,15 @@ import (
 func New(downloadType DownloadType, host string) (Downloader, error) {
 	switch downloadType {
 	case LOCAL:
-		return NewLocalDownloader(), nil
+		return NewLocalDownloader()
 	case HTTP:
-		return NewHttpDownloader(), nil
+		return NewHttpDownloader()
 	case TORRENT:
-		return NewTorrentDownloader(), nil
+		return NewTorrentDownloader()
 	case FTP:
-		return NewFtpDownloader(host), nil
+		return NewFtpDownloader(host)
 	case YTDLP:
-		return NewYtDlpDownloader(), nil
+		return NewYtDlpDownloader()
 	default:
 		return nil, fmt.Errorf("unknown download type: %d", downloadType)
 	}

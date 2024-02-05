@@ -8,8 +8,8 @@ import (
 )
 
 func TestHTTPDownload(t *testing.T) {
-	NewHttpDownloader()
-	d := NewHttpDownloader()
-	err := d.Download(context.Background(), "https://picsum.photos/id/237/200/300", "./test2.webp")
+	d, err := NewHttpDownloader()
+	require.NoError(t, err)
+	err = d.Download(context.Background(), "https://picsum.photos/id/237/200/300", "./test2.webp")
 	require.NoError(t, err)
 }

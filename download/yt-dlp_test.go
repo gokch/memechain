@@ -8,8 +8,9 @@ import (
 )
 
 func TestYtDlpDownload(t *testing.T) {
-	d := NewYtDlpDownloader()
-	err := d.Download(context.Background(), "https://www.youtube.com/watch?v=wILX71HE3e0", "./youtube.mp4")
+	d, err := NewYtDlpDownloader()
+	require.NoError(t, err)
+	err = d.Download(context.Background(), "https://www.youtube.com/watch?v=wILX71HE3e0", "./youtube.mp4")
 	require.NoError(t, err)
 
 	err = d.Download(context.Background(), "https://www.youtube.com/watch?v=wILX71HE3e0", "./")

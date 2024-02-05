@@ -6,8 +6,8 @@ import (
 	"net/http"
 )
 
-func NewHttpDownloader() *HttpDownloader {
-	return &HttpDownloader{}
+func NewHttpDownloader() (*HttpDownloader, error) {
+	return &HttpDownloader{}, nil
 }
 
 var _ Downloader = (*HttpDownloader)(nil)

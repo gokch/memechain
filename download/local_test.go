@@ -8,7 +8,8 @@ import (
 )
 
 func TestLocalDownload(t *testing.T) {
-	local := NewLocalDownloader()
-	err := local.Download(context.Background(), "./test2.webp", "./test3.webp")
+	local, err := NewLocalDownloader()
+	require.NoError(t, err)
+	err = local.Download(context.Background(), "./test2.webp", "./test3.webp")
 	require.NoError(t, err)
 }

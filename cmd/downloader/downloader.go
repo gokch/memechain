@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gokch/memechain/download"
@@ -23,9 +24,9 @@ var (
 	workerSize int64
 
 	downloadType string
-	host         string
-	remotes      []string
-	locals       []string
+	address      string
+	remote       string
+	local        string
 )
 
 func init() {
@@ -34,10 +35,10 @@ func init() {
 	fs.Int64VarP(&timeout, "timeout", "t", 0, "timeout seconds, 0 is no timeout")
 	fs.Int64VarP(&workerSize, "worker", "w", 1, "worker size")
 
-	fs.StringVar(&downloadType, "type", "d", "download type")
-	fs.StringVar(&host, "host", "h", "host address")
-	fs.StringArrayVarP(&remotes, "remotes", "r", []string{}, "remote path or url")
-	fs.StringArrayVarP(&locals, "locals", "l", []string{}, "local path")
+	fs.StringVarP(&downloadType, "download", "d", "", "download type")
+	fs.StringVarP(&address, "address", "a", "", "host address")
+	fs.StringVarP(&remote, "remotes", "r", "", "remote path or url")
+	fs.StringVarP(&local, "locals", "l", "", "local path")
 }
 
 func main() {
@@ -59,12 +60,20 @@ func rootRun(cmd *cobra.Command, args []string) {
 	}
 	log.Info().Msg("start cli")
 
-	downloader, err := download.New(download.FromString(downloadType), host)
+	downloader, err := download.New(download.FromString(downloadType), address)
 	if err != nil {
 		log.Error().Err(err).Msg("new downloader")
 	}
-	for i := 0; i < len(remotes); i++ {
-		downloader.Download(ctx, remotes[i], locals[i])
+
+	remotes := strings.Split(remote, ",")
+	locals := strings.Split(local, ",")
+
+	if len(remotes) != len(locals) {
+		log.Error().Msg("remote and local path count mismatch")
+	} else {
+		for i := 0; i < len(remotes); i++ {
+			downloader.Download(ctx, remotes[i], locals[i])
+		}
 	}
 
 	utilx.HandleKillSig(func() {

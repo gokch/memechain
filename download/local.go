@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-func NewLocalDownloader() *LocalDownloader {
-	return &LocalDownloader{}
+func NewLocalDownloader() (*LocalDownloader, error) {
+	return &LocalDownloader{}, nil
 }
 
 var _ Downloader = (*LocalDownloader)(nil)

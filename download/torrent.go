@@ -9,14 +9,14 @@ import (
 )
 
 // TODO
-func NewTorrentDownloader() *TorrentDownloader {
+func NewTorrentDownloader() (*TorrentDownloader, error) {
 	client, err := torrent.NewClient(nil)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	return &TorrentDownloader{
 		client: client,
-	}
+	}, nil
 }
 
 var _ Downloader = (*TorrentDownloader)(nil)
