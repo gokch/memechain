@@ -1,6 +1,7 @@
 package download
 
 import (
+	"context"
 	"io"
 	"os"
 )
@@ -9,29 +10,27 @@ func NewLocalDownloader() *LocalDownloader {
 	return &LocalDownloader{}
 }
 
-func (d *LocalDownloader) WithPath(path string) *LocalDownloader {
-	d.path = path
-	return d
-}
-
 var _ Downloader = (*LocalDownloader)(nil)
 
 type LocalDownloader struct {
-	path string
 }
 
 func (d *LocalDownloader) Type() DownloadType {
 	return LOCAL
 }
 
-func (d *LocalDownloader) Download(path string) error {
-	reader, err := d.Read()
+func (d *LocalDownloader) Download(ctx context.Context, remote, local string) error {
+	reader, err := d.Read(ctx, remote)
 	if err != nil {
 		return err
 	}
-	return WriteToFile(reader, path)
+	return WriteToFile(reader, local)
 }
 
-func (d *LocalDownloader) Read() (io.Reader, error) {
-	return os.Open(d.path)
+func (d *LocalDownloader) Read(ctx context.Context, remote string) (io.Reader, error) {
+	return os.Open(remote)
+}
+
+func (d *LocalDownloader) Close() error {
+	return nil
 }

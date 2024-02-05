@@ -1,6 +1,7 @@
 package download
 
 import (
+	"context"
 	"errors"
 	"io"
 
@@ -18,24 +19,18 @@ func NewTorrentDownloader() *TorrentDownloader {
 	}
 }
 
-func (d *TorrentDownloader) WithURI(uri string) *TorrentDownloader {
-	d.uri = uri
-	return d
-}
-
 var _ Downloader = (*TorrentDownloader)(nil)
 
 type TorrentDownloader struct {
 	client *torrent.Client
-	uri    string
 }
 
 func (d *TorrentDownloader) Type() DownloadType {
 	return TORRENT
 }
 
-func (d *TorrentDownloader) Download(path string) error {
-	tor, err := d.client.AddMagnet(d.uri)
+func (d *TorrentDownloader) Download(ctx context.Context, remote, local string) error {
+	tor, err := d.client.AddMagnet(remote)
 	if err != nil {
 		return err
 	}
@@ -44,6 +39,11 @@ func (d *TorrentDownloader) Download(path string) error {
 	return nil
 }
 
-func (d *TorrentDownloader) Read() (io.Reader, error) {
+func (d *TorrentDownloader) Read(ctx context.Context, remote string) (io.Reader, error) {
 	return nil, errors.New("not implemented")
+}
+
+func (d *TorrentDownloader) Close() error {
+	d.client.Close()
+	return nil
 }

@@ -8,11 +8,10 @@ import (
 	"github.com/bramvdbogaerde/go-scp"
 )
 
-func NewScpDownloader(url, path string) *ScpDownloader {
+func NewScpDownloader(url string) *ScpDownloader {
 	client := scp.NewClient(url, nil)
 	return &ScpDownloader{
 		client: &client,
-		path:   path,
 	}
 }
 
@@ -20,22 +19,21 @@ var _ Downloader = (*ScpDownloader)(nil)
 
 type ScpDownloader struct {
 	client *scp.Client
-	path   string
 }
 
 func (d *ScpDownloader) Type() DownloadType {
 	return SCP
 }
 
-func (d *ScpDownloader) Download(path string) error {
-	reader, err := d.Read()
+func (d *ScpDownloader) Download(ctx context.Context, remote, local string) error {
+	reader, err := d.Read(ctx, remote)
 	if err != nil {
 		return err
 	}
-	return WriteToFile(reader, path)
+	return WriteToFile(reader, local)
 }
 
-func (d *ScpDownloader) Read() (io.Reader, error) {
+func (d *ScpDownloader) Read(ctx context.Context, remote string) (io.Reader, error) {
 	err := d.client.Connect()
 	if err != nil {
 		return nil, err
@@ -43,10 +41,14 @@ func (d *ScpDownloader) Read() (io.Reader, error) {
 	defer d.client.Close()
 
 	rw := bytes.NewBuffer(nil)
-	err = d.client.CopyFromRemotePassThru(context.Background(), rw, d.path, nil)
+	err = d.client.CopyFromRemotePassThru(ctx, rw, remote, nil)
 	if err != nil {
 		return nil, err
 	}
 	return rw, nil
+}
 
+func (d *ScpDownloader) Close() error {
+	d.client.Close()
+	return nil
 }

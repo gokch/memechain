@@ -13,33 +13,31 @@ func NewYtDlpDownloader() *YtDlpDownloader {
 	return &YtDlpDownloader{}
 }
 
-func (d *YtDlpDownloader) WithUrl(url string) *YtDlpDownloader {
-	d.url = url
-	return d
-}
-
 var _ Downloader = (*YtDlpDownloader)(nil)
 
 type YtDlpDownloader struct {
-	url string
 }
 
 func (d *YtDlpDownloader) Type() DownloadType {
 	return YTDLP
 }
 
-func (d *YtDlpDownloader) Download(path string) error {
-	if path[len(path)-1] == '/' {
-		path += "%(extractor)s - %(title)s.%(ext)s"
+func (d *YtDlpDownloader) Download(ctx context.Context, remote, local string) error {
+	if local[len(local)-1] == '/' {
+		local += "%(extractor)s - %(title)s.%(ext)s"
 	}
-	cmd := ytdlp.New().Output(path)
-	_, err := cmd.Run(context.Background(), d.url)
+	cmd := ytdlp.New().Output(local)
+	_, err := cmd.Run(context.Background(), remote)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *YtDlpDownloader) Read() (io.Reader, error) {
+func (d *YtDlpDownloader) Read(ctx context.Context, remote string) (io.Reader, error) {
 	return nil, errors.New("not implemented")
+}
+
+func (d *YtDlpDownloader) Close() error {
+	return nil
 }

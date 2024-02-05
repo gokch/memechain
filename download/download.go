@@ -1,14 +1,34 @@
 package download
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"os"
 )
 
+func New(downloadType DownloadType, host string) (Downloader, error) {
+	switch downloadType {
+	case LOCAL:
+		return NewLocalDownloader(), nil
+	case HTTP:
+		return NewHttpDownloader(), nil
+	case TORRENT:
+		return NewTorrentDownloader(), nil
+	case FTP:
+		return NewFtpDownloader(host), nil
+	case YTDLP:
+		return NewYtDlpDownloader(), nil
+	default:
+		return nil, fmt.Errorf("unknown download type: %d", downloadType)
+	}
+}
+
 type Downloader interface {
 	Type() DownloadType
-	Download(path string) error
-	Read() (io.Reader, error)
+	Download(ctx context.Context, remote, local string) error
+	Read(ctx context.Context, remote string) (io.Reader, error)
+	Close() error
 }
 
 type DownloadType uint8
@@ -33,6 +53,52 @@ const (
 	// unknown protocol - 255
 	UNKNOWN DownloadType = 0xFF
 )
+
+func FromString(s string) DownloadType {
+	switch s {
+	case "LOCAL":
+		return LOCAL
+	case "HTTP":
+		return HTTP
+	case "FTP":
+		return FTP
+	case "SCP":
+		return SCP
+	case "TORRENT":
+		return TORRENT
+	case "IPFS":
+		return IPFS
+	case "SWARM":
+		return SWARM
+	case "YTDLP":
+		return YTDLP
+	default:
+		return UNKNOWN
+	}
+}
+
+func (t DownloadType) ToString() string {
+	switch t {
+	case LOCAL:
+		return "LOCAL"
+	case HTTP:
+		return "HTTP"
+	case FTP:
+		return "FTP"
+	case SCP:
+		return "SCP"
+	case TORRENT:
+		return "TORRENT"
+	case IPFS:
+		return "IPFS"
+	case SWARM:
+		return "SWARM"
+	case YTDLP:
+		return "YTDLP"
+	default:
+		return "UNKNOWN"
+	}
+}
 
 func WriteToFile(reader io.Reader, path string) error {
 	file, err := os.Create(path)

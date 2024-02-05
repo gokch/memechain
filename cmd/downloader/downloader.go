@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gokch/memechain/download"
 	"github.com/gokch/memechain/utilx"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -12,30 +13,31 @@ import (
 
 var (
 	rootCmd = &cobra.Command{
-		Use: "client",
-		Run: rootRun,
+		Use:   "downloader",
+		Short: "file downloader cli using multiple protocols",
+		Run:   rootRun,
 	}
 
 	rootPath   string
 	timeout    int64
 	workerSize int64
-	expireSec  int64
 
-	peerIds []string
-	cids    []string
-	paths   []string
+	downloadType string
+	host         string
+	remotes      []string
+	locals       []string
 )
 
 func init() {
 	fs := rootCmd.PersistentFlags()
-	fs.StringVarP(&rootPath, "rootpath", "r", "./", "root path")
+	fs.StringVarP(&rootPath, "rootpath", "p", "./", "root path")
 	fs.Int64VarP(&timeout, "timeout", "t", 0, "timeout seconds, 0 is no timeout")
 	fs.Int64VarP(&workerSize, "worker", "w", 1, "worker size")
-	fs.Int64VarP(&expireSec, "expire", "e", 600, "expire seconds")
 
-	fs.StringArrayVar(&peerIds, "peers", []string{}, "connect peer id")
-	fs.StringArrayVarP(&cids, "cids", "c", []string{}, "download cid")
-	fs.StringArrayVarP(&paths, "paths", "p", []string{}, "download path per cid")
+	fs.StringVar(&downloadType, "type", "t", "download type")
+	fs.StringVar(&host, "host", "h", "host address")
+	fs.StringArrayVarP(&remotes, "remotes", "r", []string{}, "remote path or url")
+	fs.StringArrayVarP(&locals, "locals", "l", []string{}, "local path")
 }
 
 func main() {
@@ -45,7 +47,6 @@ func main() {
 }
 
 func rootRun(cmd *cobra.Command, args []string) {
-
 	var ctx context.Context
 	var cancel context.CancelFunc
 
@@ -56,11 +57,20 @@ func rootRun(cmd *cobra.Command, args []string) {
 	if cancel != nil {
 		defer cancel()
 	}
-
 	log.Info().Msg("start cli")
 
-	utilx.HandleKillSig(func() {
-		// TODO
-	})
+	downloader, err := download.New(download.FromString(downloadType), host)
+	if err != nil {
+		log.Error().Err(err).Msg("new downloader")
+	}
+	for i := 0; i < len(remotes); i++ {
+		downloader.Download(ctx, remotes[i], locals[i])
+	}
 
+	utilx.HandleKillSig(func() {
+		err = downloader.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("close downloader")
+		}
+	})
 }
