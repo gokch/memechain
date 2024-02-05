@@ -34,7 +34,7 @@ func init() {
 	fs.Int64VarP(&timeout, "timeout", "t", 0, "timeout seconds, 0 is no timeout")
 	fs.Int64VarP(&workerSize, "worker", "w", 1, "worker size")
 
-	fs.StringVar(&downloadType, "type", "t", "download type")
+	fs.StringVar(&downloadType, "type", "d", "download type")
 	fs.StringVar(&host, "host", "h", "host address")
 	fs.StringArrayVarP(&remotes, "remotes", "r", []string{}, "remote path or url")
 	fs.StringArrayVarP(&locals, "locals", "l", []string{}, "local path")
