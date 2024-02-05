@@ -8,22 +8,26 @@ import (
 	"github.com/bramvdbogaerde/go-scp"
 )
 
-func NewSCPDownloader(url, path string) *SCPDownloader {
+func NewScpDownloader(url, path string) *ScpDownloader {
 	client := scp.NewClient(url, nil)
-	return &SCPDownloader{
+	return &ScpDownloader{
 		client: &client,
 		path:   path,
 	}
 }
 
-var _ Downloader = (*SCPDownloader)(nil)
+var _ Downloader = (*ScpDownloader)(nil)
 
-type SCPDownloader struct {
+type ScpDownloader struct {
 	client *scp.Client
 	path   string
 }
 
-func (d *SCPDownloader) Download(path string) error {
+func (d *ScpDownloader) Type() DownloadType {
+	return SCP
+}
+
+func (d *ScpDownloader) Download(path string) error {
 	reader, err := d.Read()
 	if err != nil {
 		return err
@@ -31,7 +35,7 @@ func (d *SCPDownloader) Download(path string) error {
 	return WriteToFile(reader, path)
 }
 
-func (d *SCPDownloader) Read() (io.Reader, error) {
+func (d *ScpDownloader) Read() (io.Reader, error) {
 	err := d.client.Connect()
 	if err != nil {
 		return nil, err

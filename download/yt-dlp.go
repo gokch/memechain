@@ -24,6 +24,10 @@ type YtDlpDownloader struct {
 	url string
 }
 
+func (d *YtDlpDownloader) Type() DownloadType {
+	return YTDLP
+}
+
 func (d *YtDlpDownloader) Download(path string) error {
 	if path[len(path)-1] == '/' {
 		path += "%(extractor)s - %(title)s.%(ext)s"

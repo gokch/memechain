@@ -20,6 +20,10 @@ type LocalDownloader struct {
 	path string
 }
 
+func (d *LocalDownloader) Type() DownloadType {
+	return LOCAL
+}
+
 func (d *LocalDownloader) Download(path string) error {
 	reader, err := d.Read()
 	if err != nil {

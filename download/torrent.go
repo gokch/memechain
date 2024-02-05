@@ -30,6 +30,10 @@ type TorrentDownloader struct {
 	uri    string
 }
 
+func (d *TorrentDownloader) Type() DownloadType {
+	return TORRENT
+}
+
 func (d *TorrentDownloader) Download(path string) error {
 	tor, err := d.client.AddMagnet(d.uri)
 	if err != nil {

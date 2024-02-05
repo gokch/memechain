@@ -6,6 +6,7 @@ import (
 )
 
 type Downloader interface {
+	Type() DownloadType
 	Download(path string) error
 	Read() (io.Reader, error)
 }
@@ -20,17 +21,17 @@ const (
 	SCP   DownloadType = 0x03
 
 	// p2p protocol [ 32 - 63 ]
-	Torrent DownloadType = 0x20
+	TORRENT DownloadType = 0x20
 	IPFS    DownloadType = 0x21
 	SWARM   DownloadType = 0x22
 
 	// use specific downloader [ 64 - 127 ]
-	YT_DLP DownloadType = 0x40
+	YTDLP DownloadType = 0x40
 
 	// use custom downloader [ 128 - 254 ]
 
 	// unknown protocol - 255
-	Unknown DownloadType = 0xFF
+	UNKNOWN DownloadType = 0xFF
 )
 
 func WriteToFile(reader io.Reader, path string) error {

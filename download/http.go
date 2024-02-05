@@ -20,6 +20,10 @@ type HttpDownloader struct {
 	url string
 }
 
+func (d *HttpDownloader) Type() DownloadType {
+	return HTTP
+}
+
 func (d *HttpDownloader) Download(path string) error {
 	reader, err := d.Read()
 	if err != nil {

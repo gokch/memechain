@@ -23,6 +23,10 @@ type FtpDownloader struct {
 	remotePath string
 }
 
+func (d *FtpDownloader) Type() DownloadType {
+	return FTP
+}
+
 func (d *FtpDownloader) Download(path string) error {
 	reader, err := d.Read()
 	if err != nil {
