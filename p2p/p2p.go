@@ -296,7 +296,7 @@ func createFile(mainContext *MainContext, file types.File) error {
 	}
 	defer localFile.Close()
 
-	return syscall.Ftruncate(syscall.Handle(localFile.Fd()), file.Size)
+	return syscall.Ftruncate(int(localFile.Fd()), file.Size)
 }
 
 type ChunkQueue struct {

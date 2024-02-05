@@ -24,5 +24,4 @@ func TestZSTDCompressDecompress(t *testing.T) {
 		require.NoErrorf(t, err, "test %s", test.name)
 		assert.Equalf(t, test.origin, recover, "test %s", test.name)
 	}
-
 }
