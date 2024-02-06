@@ -36,6 +36,8 @@ func (d *TorrentDownloader) Download(ctx context.Context, remote, local string) 
 	}
 	<-tor.GotInfo()
 	tor.DownloadAll()
+	d.client.WaitAll()
+
 	return nil
 }
 
